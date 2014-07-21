@@ -10,7 +10,7 @@ See [my blog post](http://nsaunders.wordpress.com/2014/07/21/my-own-404-not-foun
 
 ## Results
 
-The output of the pipeline is a CSV file in the directory *data/est_v_nt.csv*. The file contains the top BLAST hit for human EST queries versus the nt nucleotide database, where the EST was identified using BLAT as *potentially derived* from Archaea. The last 2 columns of the file contain species and kingdom of the query sequence. So to view only those results where the top hit was an archaeal sequence you could use, for example:
+The output of the pipeline is a CSV file in the directory *data/est_v_nt.csv*. The file contains the top BLAST hit for human EST queries versus the nt nucleotide database, where the EST was identified using BLAT as *potentially derived* from Archaea. The last 2 columns of the file contain species and kingdom of the hit sequence. So to view only those results where the top hit was an archaeal sequence you could use, for example:
 
     grep Archaea data/est_v_nt.csv
 
