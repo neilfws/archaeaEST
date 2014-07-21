@@ -1,0 +1,156 @@
+# rake tasks to automate archaeaEST project
+
+require "net/ftp"
+require "mkmf"
+require "nokogiri"
+require "bio"
+# require "parallel"
+
+ncbiftp = "ftp.ncbi.nih.gov"
+
+desc "Check for prerequisites"
+task :check do
+	# check for various tools in PATH
+	# we need seq, GNU parallel, wget, fastasplitn, blat, blastn, blastdbcmd
+	cmds = {
+		"seq" => "seq is part of coreutils http://www.gnu.org/software/coreutils/",
+		"parallel" => "GNU Parallel is at http://www.gnu.org/software/parallel/",
+		"wget" => "GNU Wget is at https://www.gnu.org/software/wget/",
+		"fastasplitn" => "fastasplitn can be compiled from the src/ directory",
+		"blat" => "BLAT is at http://users.soe.ucsc.edu/~kent/src/",
+		"blastn" => "The latest BLAST+ is at ftp://ftp.ncbi.nih.gov/blast/executables/LATEST",
+		"blastdbcmd" => "The latest BLAST+ is at ftp://ftp.ncbi.nih.gov/blast/executables/LATEST"
+	}
+	cmds.each_pair do |k, v|
+		f = find_executable k
+		if f.nil?
+			puts "#{k} not found in path; #{v}"
+		end
+	end
+end
+
+namespace :db do
+	namespace :est do
+		desc "Fetch and uncompress human EST BLAST db"
+		task :fetch do
+			ftp = Net::FTP.new(ncbiftp)
+			ftp.login
+			ftp.chdir("blast/db")
+			est = ftp.list("est_human*.tar.gz")
+			est = est.map { |f| f.split(" ").last }
+			Dir.chdir(File.expand_path("../../../db/est", __FILE__))
+			system("seq 0 #{est.count - 1} | parallel -j#{est.count} wget -N ftp://#{ncbiftp}/blast/db/est_human.0{}.tar.gz")
+			# now need to uncompress
+			system("find . -name 'est_human.*.tar.gz' -exec tar zxvf {} \\;")
+			puts "Finished; files are in #{Dir.pwd}"
+		end
+		desc "Dump human EST BLAST db to fasta, splitting for BLAT"
+		task :split do
+			# code to dump fasta and split
+			Dir.chdir(File.expand_path("../../../db/est", __FILE__))
+			ENV['SPLITFRAGTEMPLATE'] = "est_human%3.3d"
+			system("blastdbcmd -db est_human -entry all -line_length 60 | fastasplitn - 20")
+			puts "Finished; files are in #{Dir.pwd}"
+		end
+		desc "Dump GIs in data/est_hits_gi.txt to fasta"
+		task :hitdump do
+			Dir.chdir(File.expand_path("../../..", __FILE__))
+			system("blastdbcmd -db db/est/est_human -entry_batch data/est_hits_gi.txt -line_length 60 -out data/est_hits.fa")
+			puts "Finished; sequences are in #{Dir.pwd}/data/est_hits.fa"			
+		end
+	end
+	namespace :nt do
+		desc "Fetch and uncompress nt BLAST db"
+		task :fetch do
+			# fetch code here
+			ftp = Net::FTP.new(ncbiftp)
+			ftp.login
+			ftp.chdir("blast/db")
+			nt = ftp.list("nt.*.tar.gz")
+			nt = nt.map { |f| f.split(" ").last }
+			Dir.chdir(File.expand_path("../../../db/nt", __FILE__))
+			system("seq 0 9 | parallel -j10 wget -N ftp://ftp.ncbi.nih.gov/blast/db/nt.0{}.tar.gz")
+			system("seq 10 #{nt.count - 1} | parallel -j#{nt.count - 10} wget -N ftp://ftp.ncbi.nih.gov/blast/db/nt.{}.tar.gz")
+			# now need to uncompress
+			system("find . -name 'nt.*.tar.gz' -exec tar zxvf {} \\;")
+			puts "Finished; files are in #{Dir.pwd}"
+		end
+	end
+	namespace :archaea do
+		desc "Fetch archaea genome ffn files"
+		task :fetch do
+			Dir.chdir(File.expand_path("../../../db/archaea", __FILE__))
+			ftp = Net::FTP.new(ncbiftp)
+			ftp.login
+			ftp.chdir("genomes/GENOME_REPORTS")
+			ftp.gettextfile("prokaryotes.txt", nil) do |line|
+				line   = line.chomp
+				fields = line.split("\t")
+				if fields[4] =~ /[Aa]rchae/ && fields[23] != "-"
+					puts fields[23]
+					system("wget -N ftp://#{ncbiftp}/genomes/ASSEMBLY_BACTERIA/#{fields[23]}/*.ffn*")
+				end
+			end
+		end
+		desc "Uncompress archaea *..scaffold.ffn.tgz files; combine with *.ffn files"
+		task :concat do
+			# uncompress/concat code here
+			Dir.chdir(File.expand_path("../../../db/archaea", __FILE__))
+			puts "Extracting tgz files to NZ.ffn..."
+			system("find . -name '*.tgz' -exec tar zxfO {} > NZ.ffn \\;")
+			puts "Combining NZ.ffn + NC*.ffn files..."
+			system("cat NZ.ffn NC_0*.ffn > archaea.ffn")
+			puts "Finished; files are in #{Dir.pwd}"
+		end
+	end
+end
+
+namespace :search do
+	namespace :blat do
+		desc "Run BLAT of human EST fasta files (query) v. archaea.ffn (subject)"
+		task :run do
+			Dir.chdir(File.expand_path("../../../", __FILE__))
+			system("parallel -j10 'var=$(printf '%03d' {}); blat db/archaea/archaea.ffn db/est/est_human$var -ooc=data/11.ooc data/psl/est_human$var.psl' ::: $(seq 1 10)")
+			system("parallel -j10 'var=$(printf '%03d' {}); blat db/archaea/archaea.ffn db/est/est_human$var -ooc=data/11.ooc data/psl/est_human$var.psl' ::: $(seq 11 20)")
+			puts "Finished; output PSL files are in #{Dir.pwd}/data/psl"
+		end
+		desc "Parse PSL files, extract list of unique human EST GI, write to file"
+		task :parse do
+			Dir.chdir(File.expand_path("../../../data", __FILE__))
+			system("cat psl/*.psl | cut -f10 | grep ^gi | cut -d '|' -f2 | sort -u > est_hits_gi.txt")
+			puts "Finished; GIs in file #{Dir.pwd}/est_hits_gi.txt"			
+		end
+	end
+	namespace :blast do
+		desc "BLAST search human EST BLAT hits to archaea v. nt database"
+		task :run do
+			Dir.chdir(File.expand_path("../../../", __FILE__))
+			format = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore staxids" 
+			system("blastn -db db/nt/nt -query data/est_hits.fa -out data/est_v_nt.tsv -max_target_seqs 1 -outfmt '#{format}' -num_threads 4")
+			puts "Finished; output in #{Dir.pwd}/data/est_v_nt.tsv"
+		end
+		desc "Parse EST v nt BLAST output; use taxid to retrieve species and kingdom"
+		task :parse do
+			Bio::NCBI.default_email = "me@me.com"
+			taxids = Hash.new
+			Dir.chdir(File.expand_path("../../../", __FILE__))
+			File.open("data/est_v_nt.csv", "w") do |f|
+				File.readlines("data/est_v_nt.tsv").each do |line|
+					line = line.chomp
+					fields = line.split("\t").map(&:strip)
+					if taxids.has_key? fields[12]
+						fields = fields + taxids[fields[12]]
+					else
+						xml   = Bio::NCBI::REST::EFetch.taxonomy(fields[12], "xml")
+						doc   = Nokogiri::XML(xml)
+						names = doc.xpath("//Taxon/ScientificName").children.map { |child| child.inner_text }
+						taxids[fields[12]] = [names[0], names[2]]
+						fields = fields + taxids[fields[12]]
+					end
+					f.write(fields.join(",") + "\n")
+				end
+			end	
+			puts "Finished; output in #{Dir.pwd}/data/est_v_nt.csv"		
+		end
+	end
+end
