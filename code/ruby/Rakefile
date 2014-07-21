@@ -92,7 +92,7 @@ namespace :db do
 				end
 			end
 		end
-		desc "Uncompress archaea *..scaffold.ffn.tgz files; combine with *.ffn files"
+		desc "Uncompress archaea *.scaffold.ffn.tgz files; combine with *.ffn files"
 		task :concat do
 			# uncompress/concat code here
 			Dir.chdir(File.expand_path("../../../db/archaea", __FILE__))
@@ -107,7 +107,7 @@ end
 
 namespace :search do
 	namespace :blat do
-		desc "Run BLAT of human EST fasta files (query) v. archaea.ffn (subject)"
+		desc "Run BLAT of human EST fasta files (query) vs archaea.ffn (subject)"
 		task :run do
 			Dir.chdir(File.expand_path("../../../", __FILE__))
 			system("parallel -j10 'var=$(printf '%03d' {}); blat db/archaea/archaea.ffn db/est/est_human$var -ooc=data/11.ooc data/psl/est_human$var.psl' ::: $(seq 1 10)")
@@ -122,7 +122,7 @@ namespace :search do
 		end
 	end
 	namespace :blast do
-		desc "BLAST search human EST BLAT hits to archaea v. nt database"
+		desc "BLAST search human EST BLAT hits to archaea vs nt database"
 		task :run do
 			Dir.chdir(File.expand_path("../../../", __FILE__))
 			format = "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore staxids" 

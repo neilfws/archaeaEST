@@ -39,16 +39,16 @@ Then run:
 It will tell you what tools you need to install. You'll need *seq, GNU parallel, wget, fastasplitn, blat, blastn, blastdbcmd* executables in your PATH.
 1. If everything looks good, run the rake tasks in order. Remember that the BLAST databases are large and may take some time to download.
 <pre>
-    rake db:archaea:fetch
-    rake db:archaea:concat
-    rake db:est:fetch
-    rake db:est:split
-    rake db:nt:fetch
-    rake search:blat:run
-    rake search:blat:parse
-    rake db:est:hitdump
-    rake search:blast:run
-    rake search:blast:parse
+    rake db:archaea:fetch    # Fetch archaea genome ffn files
+    rake db:archaea:concat   # Uncompress archaea *.scaffold.ffn.tgz files; combine with *.ffn files
+    rake db:est:fetch        # Fetch and uncompress human EST BLAST db
+    rake db:est:split        # Dump human EST BLAST db to fasta, splitting for BLAT
+    rake db:nt:fetch         # Fetch and uncompress nt BLAST db
+    rake search:blat:run     # Run BLAT of human EST fasta files (query) vs archaea.ffn (subject)
+    rake search:blat:parse   # Parse PSL files, extract list of unique human EST GI, write to file
+    rake db:est:hitdump      # Dump GIs in data/est_hits_gi.txt to fasta
+    rake search:blast:parse  # Parse EST v nt BLAST output; use taxid to retrieve species and kingdom
+    rake search:blast:run    # BLAST search human EST BLAT hits to archaea vs nt database
 </pre>
 
 If all of that worked, you now have output in *data/est_v_nt.csv*.
