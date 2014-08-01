@@ -47,8 +47,8 @@ It will tell you what tools you need to install. You'll need *seq, GNU parallel,
     rake search:blat:run     # Run BLAT of human EST fasta files (query) vs archaea.ffn (subject)
     rake search:blat:parse   # Parse PSL files, extract list of unique human EST GI, write to file
     rake db:est:hitdump      # Dump GIs in data/est_hits_gi.txt to fasta
-    rake search:blast:parse  # Parse EST v nt BLAST output; use taxid to retrieve species and kingdom
     rake search:blast:run    # BLAST search human EST BLAT hits to archaea vs nt database
+    rake search:blast:parse  # Parse EST v nt BLAST output; use taxid to retrieve species and kingdom
 </pre>
 
 If all of that worked, you now have output in *data/est_v_nt.csv*.
