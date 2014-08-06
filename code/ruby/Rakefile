@@ -80,6 +80,7 @@ namespace :db do
 		desc "Fetch archaea genome ffn files"
 		task :fetch do
 			Dir.chdir(File.expand_path("../../../db/archaea", __FILE__))
+			archaea = []
 			ftp = Net::FTP.new(ncbiftp)
 			ftp.login
 			ftp.chdir("genomes/GENOME_REPORTS")
@@ -87,10 +88,24 @@ namespace :db do
 				line   = line.chomp
 				fields = line.split("\t")
 				if fields[4] =~ /[Aa]rchae/ && fields[23] != "-"
-					puts fields[23]
-					system("wget -N ftp://#{ncbiftp}/genomes/ASSEMBLY_BACTERIA/#{fields[23]}/*.ffn*")
+					puts "Archaea FTP path = #{fields[23]}"
+					archaea << fields[23]
 				end
 			end
+			ftp.chdir("/genomes/ASSEMBLY_BACTERIA")
+			File.open("urls.txt", "w+") do |f|
+				archaea.each do |sp|
+					ls = ftp.list("#{sp}/*.ffn*")
+					ls.each do |ffn|
+						fa = ffn.split(" ").last
+						puts "Writing #{fa} to file"
+						f.puts "ftp://#{ncbiftp}/genomes/ASSEMBLY_BACTERIA/#{fa}"
+					end
+				end
+			end
+			# this is clunky but anything else seems to upset the FTP server
+			system("for u in `cat scratch/urls.txt`; do wget -N $u; done")
+			puts "Finished; files are in #{Dir.pwd}"
 		end
 		desc "Uncompress archaea *.scaffold.ffn.tgz files; combine with *.ffn files"
 		task :concat do
