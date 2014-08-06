@@ -20,11 +20,11 @@ It is not straightforward to set up, so you should probably not and just trust t
 
 However, if you are feeling brave, you can try this. You'll need a Linux machine and a Ruby installation as an absolute minimum.
 
-1. Clone this Github repository
-1. Replace the 3 symbolic links in *db/* with real directories *i.e.*
+1. Clone this Github repository and cd into it
+1. Remove the 3 symbolic links in *db/* if they exist and replace with real directories *i.e.*
 <pre>
     rm db/archaea db/est db/nt
-    mkdir db/archaea db/est db/nt
+    mkdir -p db/archaea db/est db/nt
 </pre>
 Make sure there's enough room on disk for them to hold the required databases (about 50 GB as of 2014-07-22 and rising).
 1. Change to the *code/ruby* directory. The *Gemfile* specifies required Ruby gems, *bio* and *nokogiri*. You can install them using Bundler:
