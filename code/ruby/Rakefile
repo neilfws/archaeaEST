@@ -104,7 +104,7 @@ namespace :db do
 				end
 			end
 			# this is clunky but anything else seems to upset the FTP server
-			system("for u in `cat scratch/urls.txt`; do wget -N $u; done")
+			system("for u in `cat urls.txt`; do wget -N $u; done")
 			puts "Finished; files are in #{Dir.pwd}"
 		end
 		desc "Uncompress archaea *.scaffold.ffn.tgz files; combine with *.ffn files"
