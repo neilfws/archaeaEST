@@ -69,8 +69,15 @@ namespace :db do
 			nt = ftp.list("nt.*.tar.gz")
 			nt = nt.map { |f| f.split(" ").last }
 			Dir.chdir(File.expand_path("../../../db/nt", __FILE__))
-			system("seq 0 9 | parallel -j10 wget -N ftp://ftp.ncbi.nih.gov/blast/db/nt.0{}.tar.gz")
-			system("seq 10 #{nt.count - 1} | parallel -j#{nt.count - 10} wget -N ftp://ftp.ncbi.nih.gov/blast/db/nt.{}.tar.gz")
+			File.open("urls.txt", "w+") do |f|
+				nt.each do |gz|
+					f.puts "#{ncbiftp}::blast/db/#{gz}"
+				end
+			end
+			# system("seq 0 9 | parallel -j10 wget -N ftp://ftp.ncbi.nih.gov/blast/db/nt.0{}.tar.gz")
+			# system("seq 10 #{nt.count - 1} | parallel -j#{nt.count - 10} wget -N ftp://ftp.ncbi.nih.gov/blast/db/nt.{}.tar.gz")
+			# use rsync instead
+			system("cat urls.txt | parallel -j10 rsync --partial --progress -av {} .")
 			# now need to uncompress
 			system("find . -name 'nt.*.tar.gz' -exec tar zxvf {} \\;")
 			puts "Finished; files are in #{Dir.pwd}"
