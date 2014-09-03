@@ -99,12 +99,16 @@ namespace :db do
 					ls.each do |ffn|
 						fa = ffn.split(" ").last
 						puts "Writing #{fa} to file"
-						f.puts "ftp://#{ncbiftp}/genomes/ASSEMBLY_BACTERIA/#{fa}"
+						# f.puts "ftp://#{ncbiftp}/genomes/ASSEMBLY_BACTERIA/#{fa}"
+						# changed for rsync
+						f.puts "#{ncbiftp}::genomes/ASSEMBLY_BACTERIA/#{fa}"
 					end
 				end
 			end
 			# this is clunky but anything else seems to upset the FTP server
-			system("for u in `cat urls.txt`; do wget -N $u; done")
+			# system("for u in `cat urls.txt`; do wget -N $u; done")
+			# let's rsync instead!
+			system("cat urls.txt | parallel -j10 rsync --partial --progress -av {} .")
 			puts "Finished; files are in #{Dir.pwd}"
 		end
 		desc "Uncompress archaea *.scaffold.ffn.tgz files; combine with *.ffn files"
